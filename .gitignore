@@ -1,0 +1,16 @@
+# Downloaded assets and generated data
+/model/
+/test_images/
+/outputs/
+/logs/
+/environment/
+*.part
+
+# Environments and credentials
+.venv/
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+.DS_Store

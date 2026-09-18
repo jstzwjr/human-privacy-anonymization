@@ -1,0 +1,77 @@
+{
+  "code_commit": "5669b7c8e3ac961a9fac3c3dc3967c328c7ffec3",
+  "assets": [
+    {
+      "path": "model/rf-detr-seg-medium.pt",
+      "url": "https://storage.googleapis.com/rfdetr/rf-detr-seg-m-ft.pth",
+      "label": "RF-DETR-Seg-M",
+      "status": "verified",
+      "bytes": 143024058,
+      "md5": "a49af1562c3719227ad43d0ca53b4c7a",
+      "sha256": "3ad325094735f431aee9962a8d204d68eb5bfc393d53e7e836e70998fef5ea58",
+      "official_md5": "a49af1562c3719227ad43d0ca53b4c7a"
+    },
+    {
+      "path": "model/rf-detr-seg-large.pt",
+      "url": "https://storage.googleapis.com/rfdetr/rf-detr-seg-l-ft.pth",
+      "label": "RF-DETR-Seg-L",
+      "status": "verified",
+      "bytes": 145055866,
+      "md5": "275f7b094909544ed2841c94a677d07e",
+      "sha256": "ca7b7c630ba22496067cc4f034c4e70c8e47fd7adcea04c3a49aa8c1755cbe6b",
+      "official_md5": "275f7b094909544ed2841c94a677d07e"
+    },
+    {
+      "path": "model/rf-detr-seg-xxlarge.pt",
+      "url": "https://storage.googleapis.com/rfdetr/rf-detr-seg-2xl-ft.pth",
+      "label": "RF-DETR-Seg-2XL",
+      "status": "verified",
+      "bytes": 154851262,
+      "md5": "040bc3412af840fa8a47e0ff69b552ba",
+      "sha256": "f6e06ac5ebafd3f9f6f01c55a7f53b8785a1697037063a6adeb737c4c6ce4838",
+      "official_md5": "040bc3412af840fa8a47e0ff69b552ba"
+    },
+    {
+      "path": "test_images/bus.jpg",
+      "url": "https://raw.githubusercontent.com/ultralytics/ultralytics/main/ultralytics/assets/bus.jpg",
+      "label": "街道行人与公交车，观察多人全身覆盖",
+      "status": "verified",
+      "bytes": 137419,
+      "md5": "10bd23d36a88f18010bf1c63b56aa309",
+      "sha256": "c02019c4979c191eb739ddd944445ef408dad5679acab6fd520ef9d434bfbc63",
+      "official_md5": null,
+      "width": 810,
+      "height": 1080
+    },
+    {
+      "path": "test_images/zidane.jpg",
+      "url": "https://raw.githubusercontent.com/ultralytics/ultralytics/main/ultralytics/assets/zidane.jpg",
+      "label": "近景人物，观察局部人体与头部覆盖",
+      "status": "verified",
+      "bytes": 50427,
+      "md5": "4df1badf176cca3d3d09648bf0b0f7cf",
+      "sha256": "16d73869e3267a7d4ed00de8e860833bd1657c1b252e94c0c348277adc7b6edb",
+      "official_md5": null,
+      "width": 1280,
+      "height": 720
+    },
+    {
+      "path": "test_images/coco_val2017_000000000139.jpg",
+      "url": "https://s3.amazonaws.com/images.cocodataset.org/val2017/000000000139.jpg",
+      "label": "COCO 验证集样例 139，检查室内人物",
+      "status": "pending_manual_download"
+    },
+    {
+      "path": "test_images/coco_val2017_000000000785.jpg",
+      "url": "https://s3.amazonaws.com/images.cocodataset.org/val2017/000000000785.jpg",
+      "label": "COCO 验证集样例 785，检查运动人物",
+      "status": "verified",
+      "bytes": 133674,
+      "md5": "499f3a154b1c7d7019e15db5373c7a48",
+      "sha256": "83981537a7baeafbeb9c8cb67b3484dc26433f574b3685d021fa537e277e4726",
+      "official_md5": null,
+      "width": 640,
+      "height": 425
+    }
+  ]
+}

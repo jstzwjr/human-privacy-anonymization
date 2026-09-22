@@ -25,6 +25,7 @@ python benchmark_images.py --model L
 - [三模型三图片历史计时](docs/BENCHMARK_RESULTS.md)
 - [FP32 优化审计](docs/SPEED_AUDIT.md)
 - [COCO person 检测框评测：保存预测与独立计算指标](docs/COCO_PERSON_EVALUATION.md)
+- [SCRFD 与 COCO person 的 IoA 关联评测](docs/SCRFD_COCO_PERSON_EVALUATION.md)
 
 文档中的服务器绝对路径是本次部署记录；Python 脚本按所在目录定位项目资源。`assets_manifest.json` 与 `SHA256SUMS` 是下载记录，重新下载后会更新。下载脚本遇到网络错误会退出，重试命令见下载说明。
 
@@ -66,6 +67,29 @@ python evaluate_coco_person.py evaluate \
 `--model` 支持 `M`、`L`、`2XL`；`predict --limit 8` 可以先跑小样本。默认置信度下限为 `0.001`，为 AP 保留低分预测。现有全量预测是 `outputs/coco_person/L/predictions.jsonl`；只重算它时，将第二步的 `--results` 指向该文件，并给 `--output` 指定新的文件名即可。
 
 预测文件或指标文件已存在时，脚本拒绝覆盖。输出的 `AP` 为 IoU 0.50:0.05:0.95 的平均 AP，`AP50/AP75` 为固定 IoU 指标，`AR100` 中 100 表示每图最多保留 100 个预测框。文件中的指标为 0–1。完整格式与参数见 [COCO 评测说明](docs/COCO_PERSON_EVALUATION.md)。
+
+### SCRFD 在 COCO 上的 IoA 关联评测
+
+`evaluate_scrfd_coco_person.py` 复用当前 SCRFD 接口，先保存全部图片的人脸框，再根据 `IoA = 人脸框与人体框的交集面积 / 人脸框面积` 离线匹配 COCO person 标注。默认要求 `IoA >= 0.9`，按置信度进行一对一匹配；无人图片上的检测计误检，匹配 crowd 的检测忽略。
+
+```bash
+scrfd_run="outputs/scrfd_coco_person/10g_$(date +%Y%m%d_%H%M%S)"
+mkdir -p "$scrfd_run"
+
+python evaluate_scrfd_coco_person.py predict --model 10g \
+  --data-root /home/wjr/mount/dataset/coco \
+  --output "$scrfd_run/predictions.jsonl" \
+  2>&1 | tee "$scrfd_run/predict.log"
+
+python evaluate_scrfd_coco_person.py evaluate \
+  --results "$scrfd_run/predictions.jsonl" --ioa-threshold 0.9 \
+  --output "$scrfd_run/metrics.json" \
+  2>&1 | tee "$scrfd_run/evaluate.log"
+```
+
+`--model` 支持 `500m` 和 `10g`；`predict --limit 8` 可先验证流程。推理保留现有置信度阈值 `0.5`、NMS `0.4`，复用同一个检测器处理所有图片。评测输出 TP/FP/FN、crowd 忽略数、关联 precision、人体匹配 recall、F1 和固定 IoA 阈值的 AP（101 点插值），不截断每图的预测数量。改变 IoA 阈值只需重跑 `evaluate` 并指定新的输出文件。
+
+这些是**人脸与人体的关联代理指标**，不是标准 COCO AP 或真实人脸 AP：人体内部的误检也可能被计为正确，背身或脸不可见的人仍计入 recall 分母；AP 只反映已保存的置信度不低于 0.5 的预测。完整规则和结果格式见 [SCRFD IoA 评测说明](docs/SCRFD_COCO_PERSON_EVALUATION.md)。
 
 ### SCRFD 单张图片人脸检测
 

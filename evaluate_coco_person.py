@@ -109,20 +109,15 @@ def predict(args):
     print(f'预测完成：{output}', flush=True)
 
 
-def evaluate_results(results_path, annotations_path, output_path):
-    """只依赖保存结果与标注，按官方 COCO person bbox 协议评测。"""
-    from pycocotools.coco import COCO
-    from pycocotools.cocoeval import COCOeval
-
-    if output_path.exists():
-        raise FileExistsError(f'指标已存在，请指定新的 --output：{output_path}')
+def load_predictions(results_path, annotations_path, expected_format=FORMAT):
+    """读取逐图预测并校验标注摘要、图像完整性和检测数值，供两种评测复用。"""
     annotations, person_id, digest = annotation_info(annotations_path)
     all_image_ids = {image['id'] for image in annotations['images']}
     records = []
     seen = set()
     with results_path.open(encoding='utf-8') as stream:
         metadata = json.loads(next(stream, '{}'))
-        if metadata.get('format') != FORMAT:
+        if metadata.get('format') != expected_format:
             raise ValueError('结果格式不匹配')
         if metadata.get('annotation_sha256') != digest:
             raise ValueError('结果与当前标注的 SHA-256 不一致')
@@ -148,6 +143,20 @@ def evaluate_results(results_path, annotations_path, output_path):
                 records.append({'image_id': image_id, 'category_id': person_id, 'bbox': box, 'score': score})
     if seen != expected:
         raise ValueError(f'预测不完整：缺少 {len(expected - seen)} 张图片，不能计算完整指标')
+    return annotations, person_id, digest, metadata, records
+
+
+def evaluate_results(results_path, annotations_path, output_path):
+    """只依赖保存结果与标注，按官方 COCO person bbox 协议评测。"""
+    from pycocotools.coco import COCO
+    from pycocotools.cocoeval import COCOeval
+
+    if output_path.exists():
+        raise FileExistsError(f'指标已存在，请指定新的 --output：{output_path}')
+    annotations, person_id, digest, metadata, records = load_predictions(results_path, annotations_path)
+    image_ids = metadata['image_ids']
+    expected = set(image_ids)
+    all_image_ids = {image['id'] for image in annotations['images']}
 
     ground_truth = COCO(str(annotations_path))
     if records:

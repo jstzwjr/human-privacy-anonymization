@@ -32,8 +32,10 @@ def main():
         image = source.convert('RGB')
     # 单图 CPU 测试使用一个推理线程，检测逻辑与原接口相同。
     detector = SCRFDDetector(model_path, intra_op_num_threads=1)
-    start = time.perf_counter()
     faces = detector.detect(np.asarray(image))
+    start = time.perf_counter()
+    for _ in range(100):
+        faces = detector.detect(np.asarray(image))
     elapsed = time.perf_counter() - start
     report = {
         'image': str(args.image.resolve()),

@@ -78,7 +78,9 @@ python evaluate_coco_person.py evaluate \
 | `--model 10g`（默认） | `model/scrfd/det_10g.onnx` | thorough |
 | `--model 500m` | `model/scrfd/det_500m.onnx` | fast |
 
-当前 `rf-detr` 环境已安装 CPU 版 `onnxruntime 1.30.0`。新环境需要 `numpy`、`Pillow`、`onnxruntime`；检测器保留 CUDA 优先、CPU 回退的 provider 选择，但本次单图验证使用 CPU。
+当前 `rf-detr` 环境使用 `onnxruntime-gpu 1.30.0`，依赖 CUDA 13 和 cuDNN 9；已在 RTX 3090 上验证 GPU 推理。新环境需要 `numpy`、`Pillow`，以及 CPU 版 `onnxruntime` 或 GPU 版 `onnxruntime-gpu`（二选一；GPU 版还需匹配的 CUDA/cuDNN 运行库）。
+
+检测器保留 CUDA 优先、CPU 回退的选择。对于支持 `preload_dlls()` 的 CUDA 版 ONNX Runtime，初始化时先按[官方预加载方式](https://onnxruntime.ai/docs/execution-providers/CUDA-ExecutionProvider.html#preload-dlls)加载当前 Python 环境中的 CUDA/cuDNN 库，再创建会话。此次 `libcublasLt.so.13: cannot open shared object file` 是库已安装在 `site-packages/nvidia/cu13/lib/`、但未被动态加载器找到，通过预加载修复。判断是否真正使用 GPU，请查看终端或 `result.json` 中的 `provider`，应为 `CUDAExecutionProvider`；仅在可用 provider 列表中看到 CUDA 并不能证明加载成功。
 
 ```bash
 # 保存检测框、置信度与原尺寸可视化图片；输入图片不变。
@@ -90,6 +92,15 @@ python scrfd_image.py --image test_images/bus.jpg --model 10g \
 ```
 
 结果目录包含 `result.json`（原图像素坐标 `x/y/w/h`、score、模型摘要、实际执行后端、首轮耗时）和 `detections.png`（红色人脸框与置信度）。没有人脸时保存空列表和未画框的图片。已有输出目录拒绝覆盖；不指定 `--output-dir` 时，默认写入 `outputs/scrfd/<模型>/<图片名>/`。该入口只检测和画框，不执行模糊，也不计算 COCO person AP。
+
+GPU 回归使用两个 SCRFD 模型，检查实际后端，并比较 bus、zidane、空白图的 CPU/GPU 检测结果（坐标容差 0.1 像素、置信度容差 0.001）：
+
+```bash
+SCRFD_TEST_CUDA=1 python -m unittest discover -s tests -p test_scrfd_cuda.py -v \
+  2>&1 | tee logs/scrfd_cuda_regression.log
+```
+
+此测试需要本地模型、测试图片和可用 GPU；未设置 `SCRFD_TEST_CUDA=1` 时，常规测试会跳过它。
 
 在本项目 Python 代码中可以直接调用：
 

@@ -41,6 +41,9 @@ class SCRFDDetector:
         import onnxruntime
 
         available_providers = set(onnxruntime.get_available_providers())
+        if 'CUDAExecutionProvider' in available_providers and hasattr(onnxruntime, 'preload_dlls'):
+            # 先加载当前 Python 环境中的 CUDA/cuDNN 库，避免因搜索路径缺失而回退 CPU。
+            onnxruntime.preload_dlls()
         providers = [
             provider
             for provider in ('CUDAExecutionProvider', 'CPUExecutionProvider')

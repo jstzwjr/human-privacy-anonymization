@@ -28,6 +28,86 @@ python benchmark_images.py --model L
 
 文档中的服务器绝对路径是本次部署记录；Python 脚本按所在目录定位项目资源。`assets_manifest.json` 与 `SHA256SUMS` 是下载记录，重新下载后会更新。下载脚本遇到网络错误会退出，重试命令见下载说明。
 
+## 在 wjr 服务器运行脚本
+
+以下命令使用当前服务器的 `rf-detr` 环境。先执行一次：
+
+```bash
+ssh wjr
+source /home/wjr/miniconda3/etc/profile.d/conda.sh
+conda activate rf-detr
+cd /home/wjr/mount/code/human-privacy-anonymization
+mkdir -p logs
+set -o pipefail
+```
+
+### COCO person 检测框：先保存预测，再计算指标
+
+数据目录为 `/home/wjr/mount/dataset/coco`，包含 `val2017/` 和 `annotations/instances_val2017.json`。默认评测全部 5,000 张图片，包含无人图片；只计算 person 的 bbox AP/AR。
+
+```bash
+# 新建一次实验的目录，避免覆盖已有 L 模型结果。
+eval_run="outputs/coco_person/L_$(date +%Y%m%d_%H%M%S)"
+mkdir -p "$eval_run"
+
+# 第一步：GPU 推理，逐图保存框和置信度。
+HF_HUB_OFFLINE=1 python evaluate_coco_person.py predict \
+  --model L --data-root /home/wjr/mount/dataset/coco \
+  --output "$eval_run/predictions.jsonl" \
+  2>&1 | tee "$eval_run/predict.log"
+
+# 第二步：只读取结果和标注，不加载模型、不需要 GPU。
+python evaluate_coco_person.py evaluate \
+  --results "$eval_run/predictions.jsonl" \
+  --output "$eval_run/metrics.json" \
+  2>&1 | tee "$eval_run/evaluate.log"
+```
+
+`--model` 支持 `M`、`L`、`2XL`；`predict --limit 8` 可以先跑小样本。默认置信度下限为 `0.001`，为 AP 保留低分预测。现有全量预测是 `outputs/coco_person/L/predictions.jsonl`；只重算它时，将第二步的 `--results` 指向该文件，并给 `--output` 指定新的文件名即可。
+
+预测文件或指标文件已存在时，脚本拒绝覆盖。输出的 `AP` 为 IoU 0.50:0.05:0.95 的平均 AP，`AP50/AP75` 为固定 IoU 指标，`AR100` 中 100 表示每图最多保留 100 个预测框。文件中的指标为 0–1。完整格式与参数见 [COCO 评测说明](docs/COCO_PERSON_EVALUATION.md)。
+
+### SCRFD 单张图片人脸检测
+
+`scrfd_detector.py` 从 World Studio 的 `processing/face_anonymization/detector.py` 独立迁移，保留 `FaceBox`、`SCRFDDetector`、`detect()` 和 `active_provider()` 接口，不依赖 World Studio 或 Django。检测逻辑保持一致：RGB 输入、640×640 等比例缩放补零、置信度阈值 0.5、NMS 阈值 0.4。
+
+当前服务器已将两个原模型复制到本项目，后续推理无需访问 World Studio 目录：
+
+| 参数 | 本项目权重 | 原 World Studio 档位 |
+|---|---|---|
+| `--model 10g`（默认） | `model/scrfd/det_10g.onnx` | thorough |
+| `--model 500m` | `model/scrfd/det_500m.onnx` | fast |
+
+当前 `rf-detr` 环境已安装 CPU 版 `onnxruntime 1.30.0`。新环境需要 `numpy`、`Pillow`、`onnxruntime`；检测器保留 CUDA 优先、CPU 回退的 provider 选择，但本次单图验证使用 CPU。
+
+```bash
+# 保存检测框、置信度与原尺寸可视化图片；输入图片不变。
+python scrfd_image.py --image test_images/bus.jpg --model 10g \
+  --output-dir "outputs/scrfd/bus_10g_$(date +%Y%m%d_%H%M%S)" \
+  2>&1 | tee "logs/scrfd_bus_10g_$(date +%Y%m%d_%H%M%S).log"
+
+# 也可以传入任意单张图片的绝对路径，或改用 --model 500m。
+```
+
+结果目录包含 `result.json`（原图像素坐标 `x/y/w/h`、score、模型摘要、实际执行后端、首轮耗时）和 `detections.png`（红色人脸框与置信度）。没有人脸时保存空列表和未画框的图片。已有输出目录拒绝覆盖；不指定 `--output-dir` 时，默认写入 `outputs/scrfd/<模型>/<图片名>/`。该入口只检测和画框，不执行模糊，也不计算 COCO person AP。
+
+在本项目 Python 代码中可以直接调用：
+
+```python
+from pathlib import Path
+import numpy as np
+from PIL import Image
+from scrfd_detector import SCRFDDetector
+
+detector = SCRFDDetector(Path("model/scrfd/det_10g.onnx"))
+with Image.open("test_images/bus.jpg") as image:
+    faces = detector.detect(np.asarray(image.convert("RGB")))
+for face in faces:
+    print(face.x, face.y, face.w, face.h, face.score)
+```
+
+权重是已有文件的本地副本，不进入 Git；新克隆需自行放入上表路径。原权重来源为 InsightFace v0.7 的 `buffalo_l` / `buffalo_sc` 模型包，原项目记录其用途为非商业研究，详见 [上游模型说明](https://github.com/deepinsight/insightface#license)。
+
 ---
 
 > 最新状态（2026-09-18）：已创建并验证 rf-detr Conda 环境，M/L/2XL 已完成单图 GPU 推理；详见 [环境说明](README_ENVIRONMENT.md)。下文未安装/未推理描述属于下载阶段记录。

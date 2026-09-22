@@ -24,6 +24,7 @@ python benchmark_images.py --model L
 - [已验证环境](README_ENVIRONMENT.md)
 - [三模型三图片历史计时](docs/BENCHMARK_RESULTS.md)
 - [FP32 优化审计](docs/SPEED_AUDIT.md)
+- [COCO person 检测框评测：保存预测与独立计算指标](docs/COCO_PERSON_EVALUATION.md)
 
 文档中的服务器绝对路径是本次部署记录；Python 脚本按所在目录定位项目资源。`assets_manifest.json` 与 `SHA256SUMS` 是下载记录，重新下载后会更新。下载脚本遇到网络错误会退出，重试命令见下载说明。
 
